@@ -188,7 +188,9 @@ Temporary Items
 
 # Project-specific
 test_data/
-scraped_data/
 *.csv
-*.json
 *.log
+
+# Keep JSON scraped data for version control
+# scraped_data/ directory will be tracked
+# but individual JSON files can be selectively ignored if needed

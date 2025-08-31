@@ -1,0 +1,77 @@
+{
+  "scrape_timestamp": "2025-08-31T10:26:07.051935",
+  "pools": [
+    {
+      "pool_name": "Bad Giesing-Harlaching",
+      "occupancy_level": "83 % frei",
+      "timestamp": "2025-08-31T10:26:07.018522",
+      "raw_occupancy": "Bad Giesing-Harlaching: 83 % frei"
+    },
+    {
+      "pool_name": "Cosimawellenbad",
+      "occupancy_level": "80 % frei",
+      "timestamp": "2025-08-31T10:26:07.018522",
+      "raw_occupancy": "Cosimawellenbad: 80 % frei"
+    },
+    {
+      "pool_name": "Cosimawellenbad",
+      "occupancy_level": "100 % frei",
+      "timestamp": "2025-08-31T10:26:07.018522",
+      "raw_occupancy": "Cosimawellenbad: 100 % frei"
+    },
+    {
+      "pool_name": "Michaelibad",
+      "occupancy_level": "78 % frei",
+      "timestamp": "2025-08-31T10:26:07.018522",
+      "raw_occupancy": "Michaelibad: 78 % frei"
+    },
+    {
+      "pool_name": "Michaelibad",
+      "occupancy_level": "89 % frei",
+      "timestamp": "2025-08-31T10:26:07.018522",
+      "raw_occupancy": "Michaelibad: 89 % frei"
+    },
+    {
+      "pool_name": "Nordbad",
+      "occupancy_level": "59 % frei",
+      "timestamp": "2025-08-31T10:26:07.018522",
+      "raw_occupancy": "Nordbad: 59 % frei"
+    },
+    {
+      "pool_name": "Nordbad",
+      "occupancy_level": "91 % frei",
+      "timestamp": "2025-08-31T10:26:07.018522",
+      "raw_occupancy": "Nordbad: 91 % frei"
+    },
+    {
+      "pool_name": "Südbad",
+      "occupancy_level": "74 % frei",
+      "timestamp": "2025-08-31T10:26:07.018522",
+      "raw_occupancy": "Südbad: 74 % frei"
+    },
+    {
+      "pool_name": "Südbad",
+      "occupancy_level": "100 % frei",
+      "timestamp": "2025-08-31T10:26:07.018522",
+      "raw_occupancy": "Südbad: 100 % frei"
+    },
+    {
+      "pool_name": "Westbad",
+      "occupancy_level": "87 % frei",
+      "timestamp": "2025-08-31T10:26:07.018522",
+      "raw_occupancy": "Westbad: 87 % frei"
+    },
+    {
+      "pool_name": "Westbad",
+      "occupancy_level": "92 % frei",
+      "timestamp": "2025-08-31T10:26:07.018522",
+      "raw_occupancy": "Westbad: 92 % frei"
+    },
+    {
+      "pool_name": "Dantebad",
+      "occupancy_level": "100 % frei",
+      "timestamp": "2025-08-31T10:26:07.018522",
+      "raw_occupancy": "Dantebad: 100 % frei"
+    }
+  ]
+}

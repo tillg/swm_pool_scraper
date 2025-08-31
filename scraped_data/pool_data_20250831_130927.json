@@ -1,0 +1,181 @@
+{
+  "scrape_timestamp": "2025-08-31T13:09:27.673420",
+  "scrape_metadata": {
+    "total_facilities": 12,
+    "pools_count": 6,
+    "saunas_count": 6,
+    "unknown_count": 0,
+    "scrape_duration_ms": 11689.491033554077,
+    "hour": 13,
+    "day_of_week": 6,
+    "is_weekend": true,
+    "duration_ms": 11689.491033554077
+  },
+  "pools": [
+    {
+      "pool_name": "Bad Giesing-Harlaching",
+      "facility_type": "pool",
+      "occupancy_level": "77 % frei",
+      "occupancy_percent": 77.0,
+      "is_open": true,
+      "timestamp": "2025-08-31T13:09:27.672142",
+      "hour": 13,
+      "day_of_week": 6,
+      "day_name": "Sunday",
+      "is_weekend": true,
+      "raw_occupancy": "Bad Giesing-Harlaching: 77 % frei"
+    },
+    {
+      "pool_name": "Cosimawellenbad",
+      "facility_type": "pool",
+      "occupancy_level": "66 % frei",
+      "occupancy_percent": 66.0,
+      "is_open": true,
+      "timestamp": "2025-08-31T13:09:27.672142",
+      "hour": 13,
+      "day_of_week": 6,
+      "day_name": "Sunday",
+      "is_weekend": true,
+      "raw_occupancy": "Cosimawellenbad: 66 % frei"
+    },
+    {
+      "pool_name": "Michaelibad",
+      "facility_type": "pool",
+      "occupancy_level": "64 % frei",
+      "occupancy_percent": 64.0,
+      "is_open": true,
+      "timestamp": "2025-08-31T13:09:27.672142",
+      "hour": 13,
+      "day_of_week": 6,
+      "day_name": "Sunday",
+      "is_weekend": true,
+      "raw_occupancy": "Michaelibad: 64 % frei"
+    },
+    {
+      "pool_name": "Nordbad",
+      "facility_type": "pool",
+      "occupancy_level": "34 % frei",
+      "occupancy_percent": 34.0,
+      "is_open": true,
+      "timestamp": "2025-08-31T13:09:27.672142",
+      "hour": 13,
+      "day_of_week": 6,
+      "day_name": "Sunday",
+      "is_weekend": true,
+      "raw_occupancy": "Nordbad: 34 % frei"
+    },
+    {
+      "pool_name": "Südbad",
+      "facility_type": "pool",
+      "occupancy_level": "55 % frei",
+      "occupancy_percent": 55.0,
+      "is_open": true,
+      "timestamp": "2025-08-31T13:09:27.672142",
+      "hour": 13,
+      "day_of_week": 6,
+      "day_name": "Sunday",
+      "is_weekend": true,
+      "raw_occupancy": "Südbad: 55 % frei"
+    },
+    {
+      "pool_name": "Westbad",
+      "facility_type": "pool",
+      "occupancy_level": "61 % frei",
+      "occupancy_percent": 61.0,
+      "is_open": true,
+      "timestamp": "2025-08-31T13:09:27.672142",
+      "hour": 13,
+      "day_of_week": 6,
+      "day_name": "Sunday",
+      "is_weekend": true,
+      "raw_occupancy": "Westbad: 61 % frei"
+    }
+  ],
+  "saunas": [
+    {
+      "pool_name": "Cosimawellenbad",
+      "facility_type": "sauna",
+      "occupancy_level": "100 % frei",
+      "occupancy_percent": 100.0,
+      "is_open": true,
+      "timestamp": "2025-08-31T13:09:27.672142",
+      "hour": 13,
+      "day_of_week": 6,
+      "day_name": "Sunday",
+      "is_weekend": true,
+      "raw_occupancy": "Cosimawellenbad: 100 % frei"
+    },
+    {
+      "pool_name": "Michaelibad",
+      "facility_type": "sauna",
+      "occupancy_level": "74 % frei",
+      "occupancy_percent": 74.0,
+      "is_open": true,
+      "timestamp": "2025-08-31T13:09:27.672142",
+      "hour": 13,
+      "day_of_week": 6,
+      "day_name": "Sunday",
+      "is_weekend": true,
+      "raw_occupancy": "Michaelibad: 74 % frei"
+    },
+    {
+      "pool_name": "Nordbad",
+      "facility_type": "sauna",
+      "occupancy_level": "86 % frei",
+      "occupancy_percent": 86.0,
+      "is_open": true,
+      "timestamp": "2025-08-31T13:09:27.672142",
+      "hour": 13,
+      "day_of_week": 6,
+      "day_name": "Sunday",
+      "is_weekend": true,
+      "raw_occupancy": "Nordbad: 86 % frei"
+    },
+    {
+      "pool_name": "Südbad",
+      "facility_type": "sauna",
+      "occupancy_level": "100 % frei",
+      "occupancy_percent": 100.0,
+      "is_open": true,
+      "timestamp": "2025-08-31T13:09:27.672142",
+      "hour": 13,
+      "day_of_week": 6,
+      "day_name": "Sunday",
+      "is_weekend": true,
+      "raw_occupancy": "Südbad: 100 % frei"
+    },
+    {
+      "pool_name": "Westbad",
+      "facility_type": "sauna",
+      "occupancy_level": "80 % frei",
+      "occupancy_percent": 80.0,
+      "is_open": true,
+      "timestamp": "2025-08-31T13:09:27.672142",
+      "hour": 13,
+      "day_of_week": 6,
+      "day_name": "Sunday",
+      "is_weekend": true,
+      "raw_occupancy": "Westbad: 80 % frei"
+    },
+    {
+      "pool_name": "Dantebad",
+      "facility_type": "sauna",
+      "occupancy_level": "100 % frei",
+      "occupancy_percent": 100.0,
+      "is_open": true,
+      "timestamp": "2025-08-31T13:09:27.672142",
+      "hour": 13,
+      "day_of_week": 6,
+      "day_name": "Sunday",
+      "is_weekend": true,
+      "raw_occupancy": "Dantebad: 100 % frei"
+    }
+  ],
+  "unknown_facilities": [],
+  "summary": {
+    "avg_pool_occupancy": 59.5,
+    "avg_sauna_occupancy": 90.0,
+    "busiest_pool": "Bad Giesing-Harlaching",
+    "quietest_pool": "Nordbad"
+  }
+}
