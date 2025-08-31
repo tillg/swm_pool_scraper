@@ -154,14 +154,34 @@ let regressor = try MLRegressor(trainingData: dataTable, targetColumn: "occupanc
 python -m json.tool scraped_data/pool_data_*.json | tail -50
 ```
 
-## Contributing
+## Testing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+**Run All Tests:**
+```bash
+# Complete test suite
+python run_tests.py all
 
-## License
+# Or directly with pytest
+python -m pytest tests/ -v
+```
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+**Run Specific Test Suites:**
+```bash
+# Model tests only
+python run_tests.py models
+
+# API scraper tests only
+python run_tests.py api
+
+# Data storage tests only
+python run_tests.py storage
+
+# Quick tests (excludes selenium)
+python run_tests.py quick
+```
+
+**Test Configuration:**
+- Tests are configured via `pytest.ini`
+- Test files follow the pattern `test_*.py` in the `tests/` directory
+- Use `-v` flag for verbose output
+- Selenium tests are marked with `@pytest.mark.selenium` for selective execution
