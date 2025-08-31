@@ -4,12 +4,13 @@ A production-ready web scraper for collecting real-time pool occupancy data from
 
 ## Features
 
-- 🏊‍♂️ **Real-time data collection** - Scrapes occupancy for 6 pools and 6 saunas
+- 🚀 **API-based scraping** - Direct access to Ticos counter API (10x faster than web scraping)
+- 🏊‍♂️ **Real-time data collection** - Monitors occupancy for 7 pools and 6 saunas
 - 📊 **ML-optimized output** - Rich JSON data with Create ML-ready CSV conversion
 - 🕐 **Time-based features** - Hour, day-of-week, weekend indicators for temporal modeling  
-- 🎯 **Smart parsing** - Distinguishes between pools and saunas automatically
+- 🔍 **Automatic monitoring** - Detects new facilities and capacity changes
 - 📈 **Analytics ready** - Summary statistics and metadata included
-- 🔄 **Modular design** - Separate data collection and CSV conversion tools
+- 🔄 **Dual-mode operation** - API (fast) or Selenium (fallback) scraping methods
 
 ## Quick Start
 
@@ -26,24 +27,28 @@ python json_to_csv.py --include-test-data
 
 ## Architecture
 
-**Data Collection Pipeline:**
-1. **Selenium WebDriver** - Handles JavaScript-rendered content  
-2. **Regex parsing** - Extracts facility names and occupancy percentages
-3. **JSON storage** - Rich metadata preserved for analysis
-4. **CSV conversion** - On-demand processing for ML training
+**Data Collection Methods:**
+1. **API Mode (Default)** - Direct calls to `counter.ticos-systems.cloud` API
+2. **Selenium Mode (Fallback)** - Browser automation if API changes
+3. **Monitoring Mode** - Checks for new facilities and changes
+4. **Validation Mode** - Compares API data with website display
 
 **Project Structure:**
 ```
 swm_pool_scraper/
-├── main.py              # Main scraper script
-├── json_to_csv.py       # CSV converter for Create ML
+├── main.py                # Main scraper with multiple modes
+├── json_to_csv.py         # CSV converter for Create ML
+├── config/
+│   └── facilities.json    # Organization ID to pool name mappings
 ├── src/
-│   ├── scraper.py       # Core scraping logic
-│   ├── models.py        # Data models with ML features
-│   ├── data_storage.py  # JSON/CSV output handling
-│   └── logger.py        # Logging configuration
-├── scraped_data/        # Production JSON data (tracked in git)
-└── test_data/          # Development data (ignored)
+│   ├── api_scraper.py     # API-based scraping (fast)
+│   ├── scraper.py         # Selenium-based scraping (fallback)
+│   ├── facility_registry.py # Facility management & discovery
+│   ├── models.py          # Data models with ML features
+│   ├── data_storage.py    # JSON/CSV output handling
+│   └── logger.py          # Logging configuration
+├── scraped_data/          # Production JSON data (tracked in git)
+└── test_data/            # Development data (ignored)
 ```
 
 ## Data Format
@@ -84,10 +89,50 @@ timestamp,pool_name,facility_type,occupancy_percent,hour,day_of_week,is_weekend
 - **Chrome WebDriver** - Automated browser control
 - **JSON/CSV** - Data storage formats
 
+## Monitoring for New Facilities
+
+The scraper includes automatic monitoring to detect when SWM adds new pools or saunas:
+
+**Check for New Facilities:**
+```bash
+# Run monitoring check
+python main.py --monitor
+
+# This will:
+# 1. Check the website for unknown pool names
+# 2. Compare with config/facilities.json
+# 3. Report any new facilities found
+```
+
+**Validate API vs Website:**
+```bash
+# Ensure API data matches website display
+python main.py --validate
+
+# Reports any mismatches between API and website
+```
+
+**Manual Discovery Process:**
+1. Check monitoring report for unknown facilities
+2. Look for patterns in organization IDs (they're sequential)
+3. Update `config/facilities.json` with new mappings
+4. Test with `python main.py --method api`
+
+**Automatic Alerts:**
+- New facilities are logged as warnings
+- Capacity changes are tracked automatically
+- Check `alerts.json` for historical changes
+
 ## Usage Examples
 
 **Regular Data Collection:**
 ```bash
+# API mode (fast, ~2 seconds)
+python main.py
+
+# Selenium mode (fallback, ~10 seconds)
+python main.py --method selenium
+
 # Run every 15 minutes via cron
 */15 * * * * cd /path/to/scraper && python main.py
 ```

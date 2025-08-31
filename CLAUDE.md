@@ -8,22 +8,37 @@ This is a Python web scraping project for collecting pool occupancy data from St
 
 ## Architecture
 
-- **Simple Python script**: Single-execution scraper that fetches data and appends to a file
-- **Modular design**: Proper Python modules structure planned
-- **Test data storage**: Save scraped data to `./test_data/` for development and tuning
+- **API-based scraping**: Direct calls to `https://counter.ticos-systems.cloud/api/gates/counter`
+- **Facility registry**: Manages organization ID to pool name mappings in `config/facilities.json`
+- **Dual-mode operation**: API (primary) and Selenium (fallback) scraping methods
+- **Monitoring system**: Automatic detection of new facilities and capacity changes
+- **Modular design**: Separation of concerns with registry, scraper, and monitor components
 
 ## Tech Stack
 
 - **Python 3.13** - Base language
-- **Selenium** - Browser automation for JavaScript-rendered content
-- **Beautiful Soup** - HTML parsing after page load
-- **Requests** - HTTP requests (fallback)
-- **CSV/JSON** - Data storage formats
+- **Requests** - HTTP client for API calls
+- **Selenium** - Browser automation (fallback mode)
+- **Beautiful Soup** - HTML parsing for validation
+- **JSON/CSV** - Data storage formats
 - **Logging** - Error tracking and monitoring
 
-## Development Plan
+## Key Technical Details
 
-**Key Finding**: The SWM website loads occupancy data dynamically via JavaScript, requiring browser automation rather than simple HTTP requests.
+### API Discovery
+The Ticos counter API was discovered by monitoring network traffic:
+- Endpoint: `https://counter.ticos-systems.cloud/api/gates/counter`
+- Parameter: `organizationUnitIds={org_id}`
+- Response: `{"organizationUnitId": 30195, "personCount": 72, "maxPersonCount": 311}`
+- No authentication required, but uses Origin/Referer headers
+
+### Organization ID Mapping
+Organization IDs are internal identifiers that must be mapped to pool names:
+- IDs are sequential (30184-30208 currently)
+- Mappings stored in `config/facilities.json`
+- Auto-updates capacity when changes detected
+- Pool IDs: 30195, 30190, 30208, 30197, 30184, 30187, 30199
+- Sauna IDs: 30191, 30200, 30203, 30185, 30188, 30207
 
 ## Usage
 
@@ -40,17 +55,20 @@ pip install -r requirements.txt
 ### Running the Scraper
 
 ```bash
-# Basic usage (saves JSON to scraped_data/)
+# API mode (default, fast ~2s)
 python main.py
 
-# Test mode (saves JSON to test_data/)
+# Selenium mode (fallback, ~10s)
+python main.py --method selenium
+
+# Monitor for new facilities
+python main.py --monitor
+
+# Validate API vs website
+python main.py --validate
+
+# Test mode (saves to test_data/)
 python main.py --test
-
-# Force CSV format if needed
-python main.py --format csv
-
-# Non-headless browser (for debugging)
-python main.py --test --headless=false
 
 # With debug logging
 python main.py --test --log-level DEBUG
@@ -163,19 +181,65 @@ The project now contains a complete, functional web scraping implementation:
 
 ```
 swm_pool_scraper/
+├── config/
+│   └── facilities.json     # Organization ID to pool name mappings
 ├── src/
 │   ├── __init__.py
-│   ├── scraper.py          # Selenium-based scraper with fallback parsing
+│   ├── api_scraper.py      # API-based scraper (primary method)
+│   ├── scraper.py          # Selenium-based scraper (fallback)
+│   ├── facility_registry.py # Facility management & discovery
 │   ├── data_storage.py     # CSV/JSON file operations
 │   ├── models.py           # PoolOccupancy data class
 │   └── logger.py           # Logging configuration
 ├── test_data/              # Test mode scraped data
 ├── scraped_data/           # Production scraped data
 ├── logs/                   # Application logs
-├── main.py                 # CLI entry point
+├── main.py                 # CLI entry point with multiple modes
+├── json_to_csv.py          # Convert JSON to ML-ready CSV
 ├── test_scraper.py         # Debug/test script
 ├── requirements.txt        # Python dependencies
 ├── config.py               # Configuration settings
 ├── .venv/                  # Python virtual environment
 └── .gitignore             # Git ignore rules
 ```
+
+## Monitoring for New Facilities
+
+### Automatic Detection
+Run `python main.py --monitor` to check for new facilities. This will:
+1. Scrape website for all pool names
+2. Compare with `config/facilities.json`
+3. Report any unknown facilities
+4. Check for capacity changes
+
+### Manual Discovery Process
+When a new facility is detected:
+
+1. **Identify the new facility name** from monitoring output
+2. **Find its organization ID** by probing nearby IDs:
+   ```python
+   from src.api_scraper import SWMAPIScraper
+   scraper = SWMAPIScraper()
+   for org_id in range(30210, 30220):
+       data = scraper.fetch_occupancy(org_id)
+       if data:
+           print(f"Found: {org_id} - Capacity: {data['maxPersonCount']}")
+   ```
+3. **Update the registry** in `config/facilities.json`:
+   ```json
+   {
+     "org_id": 30215,
+     "name": "New Pool Name",
+     "facility_type": "pool",
+     "max_capacity": null,
+     "active": true
+   }
+   ```
+4. **Validate** with `python main.py --validate`
+
+### Alert System
+The system automatically:
+- Logs warnings for new facilities
+- Tracks capacity changes
+- Creates `alerts.json` for historical record
+- Can be extended to send email/Slack notifications
