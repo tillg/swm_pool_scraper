@@ -56,22 +56,25 @@ pip install -r requirements.txt
 
 ```bash
 # API mode (default, fast ~2s)
-python main.py
+python scrape.py
 
 # Selenium mode (fallback, ~10s)
-python main.py --method selenium
+python scrape.py --method selenium
 
 # Monitor for new facilities
-python main.py --monitor
+python scrape.py --monitor
 
 # Validate API vs website
-python main.py --validate
+python scrape.py --validate
 
 # Test mode (saves to test_data/)
-python main.py --test
+python scrape.py --test
 
 # With debug logging
-python main.py --test --log-level DEBUG
+python scrape.py --test --log-level DEBUG
+
+# Custom output directory
+python scrape.py --output-dir /path/to/output
 ```
 
 ### Converting to CSV for Create ML
@@ -144,7 +147,7 @@ timestamp,pool_name,facility_type,occupancy_percent,is_open,hour,day_of_week,is_
 **Primary Usage (Recommended):**
 ```bash
 # 1. Collect data regularly (creates timestamped JSON files)
-python main.py
+python scrape.py
 
 # 2. When ready for ML training, convert all historical data
 python json_to_csv.py --include-test-data
@@ -156,10 +159,10 @@ python json_to_csv.py --include-test-data
 **Development/Testing:**
 ```bash
 # Test mode (saves to test_data/, not tracked in git)
-python main.py --test
+python scrape.py --test
 
 # Debug with visible browser
-python main.py --test --headless=false --log-level DEBUG
+python scrape.py --test --headless=false --log-level DEBUG
 ```
 
 ## Data Management
@@ -194,7 +197,7 @@ swm_pool_scraper/
 ├── test_data/              # Test mode scraped data
 ├── scraped_data/           # Production scraped data
 ├── logs/                   # Application logs
-├── main.py                 # CLI entry point with multiple modes
+├── scrape.py               # CLI entry point with multiple modes
 ├── json_to_csv.py          # Convert JSON to ML-ready CSV
 ├── test_scraper.py         # Debug/test script
 ├── requirements.txt        # Python dependencies
@@ -206,7 +209,7 @@ swm_pool_scraper/
 ## Monitoring for New Facilities
 
 ### Automatic Detection
-Run `python main.py --monitor` to check for new facilities. This will:
+Run `python scrape.py --monitor` to check for new facilities. This will:
 1. Scrape website for all pool names
 2. Compare with `config/facilities.json`
 3. Report any unknown facilities
@@ -235,7 +238,7 @@ When a new facility is detected:
      "active": true
    }
    ```
-4. **Validate** with `python main.py --validate`
+4. **Validate** with `python scrape.py --validate`
 
 ### Alert System
 The system automatically:

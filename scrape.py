@@ -22,7 +22,8 @@ def main():
     parser.add_argument("--headless", action="store_true", default=True, help="Run browser in headless mode (selenium only)")
     parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     parser.add_argument("--format", choices=["csv", "json", "both"], default="json", help="Output format")
-    
+    parser.add_argument("--output-dir", type=str, help="Output directory (default: scraped_data/ or test_data/ in test mode)")
+
     args = parser.parse_args()
     
     logger = setup_logging(log_level=args.log_level)
@@ -30,7 +31,7 @@ def main():
     
     try:
         start_time = time.time()
-        storage = DataStorage(test_mode=args.test)
+        storage = DataStorage(test_mode=args.test, output_dir=args.output_dir)
         
         # Choose scraping method
         if args.method == "api":

@@ -10,10 +10,13 @@ from config import DATA_CONFIG, TEST_DATA_DIR, SCRAPED_DATA_DIR
 
 
 class DataStorage:
-    def __init__(self, test_mode: bool = False):
+    def __init__(self, test_mode: bool = False, output_dir: Optional[Path] = None):
         self.test_mode = test_mode
-        self.data_dir = TEST_DATA_DIR if test_mode else SCRAPED_DATA_DIR
-        self.data_dir.mkdir(exist_ok=True)
+        if output_dir:
+            self.data_dir = Path(output_dir)
+        else:
+            self.data_dir = TEST_DATA_DIR if test_mode else SCRAPED_DATA_DIR
+        self.data_dir.mkdir(parents=True, exist_ok=True)
         self.logger = logging.getLogger(__name__)
     
     def save_to_csv(self, pool_data: List[PoolOccupancy], filename: str = None) -> Path:
