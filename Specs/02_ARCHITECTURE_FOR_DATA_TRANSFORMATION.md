@@ -21,7 +21,7 @@ swm_pool_data/
 │   ├── public_holidays.json   # German public holidays
 │   └── school_holidays.json   # Bavarian school vacations
 ├── datasets/                  # transformed ML-ready data
-│   └── occupancy_features.csv
+│   └── occupancy_features.csv # single growing file, all history
 ├── src/
 │   ├── loaders/
 │   │   ├── weather_loader.py
@@ -29,11 +29,24 @@ swm_pool_data/
 │   └── transform.py
 └── .github/workflows/
     ├── scrape.yml             # existing, every 15 min
-    ├── load_weather.yml       # daily at 06:00 UTC
-    └── transform.yml          # daily at 07:00 UTC
+    ├── load_weather.yml       # daily at 05:00 UTC
+    └── transform.yml          # daily at 06:00 UTC
 ```
 
 This keeps data close to transformations and avoids cross-repo complexity.
+
+---
+
+## Key Decisions
+
+| Decision | Choice | Rationale |
+| -------- | ------ | --------- |
+| Output format | CSV | Simpler, good ML tool compatibility |
+| Historical backfill | No | Start fresh from implementation date |
+| Data retention | Keep all | No rolling window, indefinite storage |
+| School holidays | Manual JSON from official source | km.bayern.de is authoritative |
+| Weather parameters | temperature, precipitation, weather_code, cloud_cover | Sufficient for occupancy correlation |
+| File strategy | Single growing file | Simpler for ML consumption, easier deduplication |
 
 ---
 
@@ -42,7 +55,7 @@ This keeps data close to transformations and avoids cross-repo complexity.
 | Source | Frequency | Provider |
 | ------ | --------- | -------- |
 | Weather (historical + forecast) | Daily | Open-Meteo (free, no API key) |
-| Bavarian school holidays | Yearly/static | Static JSON (manually maintained) |
+| Bavarian school holidays | Yearly/static | Manual JSON from km.bayern.de |
 | German public holidays | Yearly/static | `holidays` Python package |
 
 Weather data will be **hourly** to align with pool occupancy patterns.
@@ -56,12 +69,13 @@ Weather data will be **hourly** to align with pool occupancy patterns.
 **Endpoint:** `https://api.open-meteo.com/v1/forecast`
 
 **Location:** Munich city center
+
 - Latitude: `48.1351`
 - Longitude: `11.5820`
 
 **Parameters:**
 
-```
+```text
 ?latitude=48.1351
 &longitude=11.5820
 &hourly=temperature_2m,precipitation,weather_code,cloud_cover
@@ -152,42 +166,19 @@ Generated using the `holidays` Python package for Bavaria (BY).
 
 **File:** `holidays/school_holidays.json`
 
-Bavarian school vacation periods (manually maintained from official calendar).
+**Source:** Bavarian Ministry of Education (https://www.km.bayern.de/ministerium/termine/ferientermine.html)
+
+Bavarian school vacation periods, manually maintained from the official calendar. This is the authoritative source for Bavaria and is updated annually by the ministry.
 
 ```json
 {
-  "updated_at": "2026-01-01T00:00:00+01:00",
-  "source": "https://www.km.bayern.de/schulferien",
+  "updated_at": "2026-01-16T00:00:00+01:00",
+  "source": "https://www.km.bayern.de/ministerium/termine/ferientermine.html",
   "vacations": [
     {
       "name": "Winterferien",
       "start": "2026-02-14",
       "end": "2026-02-22"
-    },
-    {
-      "name": "Osterferien",
-      "start": "2026-03-28",
-      "end": "2026-04-12"
-    },
-    {
-      "name": "Pfingstferien",
-      "start": "2026-05-23",
-      "end": "2026-06-07"
-    },
-    {
-      "name": "Sommerferien",
-      "start": "2026-07-27",
-      "end": "2026-09-07"
-    },
-    {
-      "name": "Herbstferien",
-      "start": "2026-10-31",
-      "end": "2026-11-08"
-    },
-    {
-      "name": "Weihnachtsferien",
-      "start": "2026-12-23",
-      "end": "2027-01-10"
     }
   ]
 }
@@ -220,7 +211,7 @@ def is_school_vacation(dt: datetime) -> bool:
 
 ### Schedule
 
-**Runs:** Daily at 07:00 UTC via GitHub Actions (after weather load at 06:00 UTC)
+**Runs:** Daily at 06:00 UTC via GitHub Actions (after weather load at 05:00 UTC)
 
 ### Input Files
 
@@ -237,12 +228,13 @@ Pool data is recorded every 15 minutes; weather data is hourly.
 
 **Approach:** Join pool records to the weather observation for the same hour.
 
-```
+```text
 Pool timestamp: 2026-01-16T10:45:00 → Weather hour: 2026-01-16T10:00:00
 Pool timestamp: 2026-01-16T11:15:00 → Weather hour: 2026-01-16T11:00:00
 ```
 
 Implementation:
+
 ```python
 def align_weather(pool_timestamp: datetime, weather_df: pd.DataFrame) -> dict:
     """Get weather data for the hour containing pool_timestamp."""
@@ -254,7 +246,7 @@ def align_weather(pool_timestamp: datetime, weather_df: pd.DataFrame) -> dict:
 
 ### Output Schema
 
-**File:** `datasets/occupancy_features.csv`
+**File:** `datasets/occupancy_features.csv` (single growing file, all historical data retained)
 
 | Column | Type | Description |
 | ------ | ---- | ----------- |
@@ -312,7 +304,7 @@ name: Load Weather Data
 
 on:
   schedule:
-    - cron: "0 6 * * *"  # Daily at 06:00 UTC (07:00 Berlin winter, 08:00 summer)
+    - cron: "0 5 * * *"  # Daily at 05:00 UTC (06:00 Berlin winter, 07:00 summer)
   workflow_dispatch:
 
 permissions:
@@ -352,7 +344,7 @@ name: Transform Data
 
 on:
   schedule:
-    - cron: "0 7 * * *"  # Daily at 07:00 UTC (after weather load)
+    - cron: "0 6 * * *"  # Daily at 06:00 UTC (after weather load)
   workflow_dispatch:
 
 permissions:
@@ -401,6 +393,7 @@ jobs:
 ### Data Validation
 
 Before writing output:
+
 - Assert `occupancy_percent` is in range [0, 100]
 - Assert `timestamp` is valid ISO 8601
 - Assert no duplicate `(timestamp, pool_name)` pairs
@@ -411,7 +404,7 @@ Before writing output:
 
 **requirements.txt additions:**
 
-```
+```text
 requests>=2.31.0
 pandas>=2.0.0
 holidays>=0.40
@@ -426,22 +419,4 @@ These will be addressed in future specs:
 - **Prediction pipeline:** Prophet-based, 7-day horizon in 15-min slots
 - **Serving layer:** How predictions are consumed
 - **Monitoring:** Tracking prediction accuracy
-- **Backfill:** Historical weather for existing pool data
-
----
-
-## Open Questions
-
-Questions requiring input before implementation:
-
-1. **Output format:** Should the output be CSV (simpler, smaller) or Parquet (typed, faster for large data)? Current spec assumes CSV.
-
-2. **Historical backfill:** The current pool data goes back to when? Should we backfill historical weather data for all existing pool records, or start fresh from implementation date?
-
-3. **Data retention:** Should we keep all historical data in `occupancy_features.csv` indefinitely, or implement a rolling window (e.g., last 2 years)?
-
-4. **School holidays source:** I've specified manual maintenance of `school_holidays.json`. Is there a preferred source URL or API for Bavarian school holidays, or is manual update acceptable?
-
-5. **Weather parameters:** Are the chosen parameters (temperature, precipitation, weather_code, cloud_cover) sufficient? Other options: `sunshine_duration`, `wind_speed`, `humidity`.
-
-6. **Single file vs partitioned:** Should `occupancy_features.csv` be a single growing file, or partitioned by month/year (e.g., `datasets/2026/01/occupancy_features.csv`)?
+- **Backfill:** Historical weather for existing pool data (decided: not doing backfill)
