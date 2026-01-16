@@ -14,7 +14,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 
 from .models import PoolOccupancy
-from config import SWM_URL, SELENIUM_CONFIG
+from config import SWM_URL, SELENIUM_CONFIG, TIMEZONE
 
 
 class SWMPoolScraper:
@@ -87,7 +87,7 @@ class SWMPoolScraper:
     
     def _parse_pool_data(self, soup: BeautifulSoup) -> List[PoolOccupancy]:
         pools = []
-        timestamp = datetime.now()
+        timestamp = datetime.now(TIMEZONE)
         
         self.logger.info("Parsing pool data using regex pattern matching...")
         pools = self._regex_parse(soup, timestamp)
@@ -102,7 +102,7 @@ class SWMPoolScraper:
     
     def _save_debug_html(self, soup: BeautifulSoup):
         from config import TEST_DATA_DIR
-        debug_file = TEST_DATA_DIR / f"debug_html_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+        debug_file = TEST_DATA_DIR / f"debug_html_{datetime.now(TIMEZONE).strftime('%Y%m%d_%H%M%S')}.html"
         debug_file.parent.mkdir(exist_ok=True)
         
         with open(debug_file, 'w', encoding='utf-8') as f:

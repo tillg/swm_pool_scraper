@@ -1,7 +1,11 @@
 import os
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 BASE_DIR = Path(__file__).parent
+
+# Timezone for Munich pools
+TIMEZONE = ZoneInfo("Europe/Berlin")
 TEST_DATA_DIR = BASE_DIR / "test_data"
 SCRAPED_DATA_DIR = BASE_DIR / "scraped_data"
 

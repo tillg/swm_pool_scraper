@@ -14,6 +14,7 @@ from urllib3.util.retry import Retry
 
 from .models import PoolOccupancy
 from .facility_registry import FacilityRegistry, Facility
+from config import TIMEZONE
 
 
 class APIError(Exception):
@@ -78,9 +79,9 @@ class SWMAPIScraper:
         Main scraping method - fetches all pool data via API
         Returns list of PoolOccupancy objects
         """
-        timestamp = datetime.now()
+        timestamp = datetime.now(TIMEZONE)
         pool_data = []
-        
+
         active_facilities = [f for f in self.registry.facilities.values() if f.active]
         self.logger.info(f"Fetching data for {len(active_facilities)} facilities")
         

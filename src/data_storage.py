@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 from .models import PoolOccupancy
-from config import DATA_CONFIG, TEST_DATA_DIR, SCRAPED_DATA_DIR
+from config import DATA_CONFIG, TEST_DATA_DIR, SCRAPED_DATA_DIR, TIMEZONE
 
 
 class DataStorage:
@@ -47,7 +47,7 @@ class DataStorage:
     
     def save_to_json(self, pool_data: List[PoolOccupancy], filename: str = None, metadata: Dict[str, Any] = None) -> Path:
         if not filename:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = datetime.now(TIMEZONE).strftime('%Y%m%d_%H%M%S')
             filename = f"pool_data_{timestamp}.json"
         
         filepath = self.data_dir / filename
@@ -57,7 +57,7 @@ class DataStorage:
         saunas = [p for p in pool_data if p.facility_type == 'sauna']
         unknown = [p for p in pool_data if p.facility_type == 'unknown']
         
-        scrape_time = datetime.now()
+        scrape_time = datetime.now(TIMEZONE)
         
         data = {
             'scrape_timestamp': scrape_time.isoformat(),
