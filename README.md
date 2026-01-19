@@ -178,6 +178,9 @@ python run_tests.py storage
 
 # Quick tests (excludes selenium)
 python run_tests.py quick
+
+# Integration tests (require network, test against live website)
+python -m pytest tests/ -v -m integration
 ```
 
 **Test Configuration:**
@@ -185,3 +188,11 @@ python run_tests.py quick
 - Test files follow the pattern `test_*.py` in the `tests/` directory
 - Use `-v` flag for verbose output
 - Selenium tests are marked with `@pytest.mark.selenium` for selective execution
+- Integration tests are marked with `@pytest.mark.integration` (verify scraper covers all website facilities)
+
+**Integration Tests (`test_facility_coverage.py`):**
+These tests verify the scraper's facility registry matches the SWM website:
+- `test_all_pools_are_registered` - Checks all 9 pools are registered
+- `test_all_saunas_are_registered` - Checks all 7 saunas are registered
+- `test_all_ice_rinks_are_registered` - Checks all ice rinks are registered
+- `test_total_facility_count` - Verifies total count (17 facilities)

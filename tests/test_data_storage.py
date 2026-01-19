@@ -145,11 +145,15 @@ class TestDataStorage:
     
     def test_save_to_json_with_filename(self, temp_dir, sample_pool_data):
         """Test saving to JSON with specific filename"""
+        # Mock datetime.now() to return the same time as the fixture's timestamp
+        mock_time = datetime(2025, 8, 31, 14, 30, 0)
         with patch('src.data_storage.SCRAPED_DATA_DIR', temp_dir):
-            storage = DataStorage(test_mode=False)
-            
-            metadata = {'duration_ms': 1500, 'method': 'api'}
-            filepath = storage.save_to_json(sample_pool_data, "specific.json", metadata)
+            with patch('src.data_storage.datetime') as mock_dt:
+                mock_dt.now.return_value = mock_time
+                storage = DataStorage(test_mode=False)
+
+                metadata = {'duration_ms': 1500, 'method': 'api'}
+                filepath = storage.save_to_json(sample_pool_data, "specific.json", metadata)
             
             assert filepath.exists()
             assert filepath.name == "specific.json"
