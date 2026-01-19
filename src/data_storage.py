@@ -1,6 +1,7 @@
 import csv
 import json
 import logging
+from collections import defaultdict
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
@@ -45,51 +46,72 @@ class DataStorage:
         self.logger.info(f"Appended {len(pool_data)} records to {filepath}")
         return filepath
     
-    def save_to_json(self, pool_data: List[PoolOccupancy], filename: str = None, metadata: Dict[str, Any] = None) -> Path:
+    def save_to_json(
+        self,
+        pool_data: List[PoolOccupancy],
+        filename: str = None,
+        metadata: Dict[str, Any] = None
+    ) -> Path:
         if not filename:
             timestamp = datetime.now(TIMEZONE).strftime('%Y%m%d_%H%M%S')
             filename = f"pool_data_{timestamp}.json"
-        
+
         filepath = self.data_dir / filename
-        
-        # Separate pools and saunas for better organization
-        pools = [p for p in pool_data if p.facility_type == 'pool']
-        saunas = [p for p in pool_data if p.facility_type == 'sauna']
-        unknown = [p for p in pool_data if p.facility_type == 'unknown']
-        
+
+        # Group facilities by type dynamically
+        by_type = defaultdict(list)
+        for facility in pool_data:
+            by_type[facility.facility_type].append(facility)
+
         scrape_time = datetime.now(TIMEZONE)
-        
+
+        # Build metadata with counts for each type
+        scrape_metadata = {
+            'total_facilities': len(pool_data),
+            'hour': scrape_time.hour,
+            'day_of_week': scrape_time.weekday(),
+            'is_weekend': scrape_time.weekday() >= 5
+        }
+        for facility_type, facilities in by_type.items():
+            scrape_metadata[f'{facility_type}_count'] = len(facilities)
+
+        if metadata:
+            scrape_metadata.update(metadata)
+
+        # Build facilities section with all types
+        facilities_by_type = {}
+        for facility_type, facilities in sorted(by_type.items()):
+            key = f'{facility_type}s'  # pluralize: pool -> pools
+            facilities_by_type[key] = [f.to_dict() for f in facilities]
+
+        # Build summary (pools get special treatment for backwards compat)
+        pools = by_type.get('pool', [])
+        summary = {}
+        if pools:
+            summary['avg_pool_occupancy'] = (
+                sum(p.occupancy_percent or 0 for p in pools) / len(pools)
+            )
+            summary['busiest_pool'] = max(
+                pools, key=lambda x: x.occupancy_percent or 0
+            ).pool_name
+            summary['quietest_pool'] = min(
+                pools, key=lambda x: x.occupancy_percent or 100
+            ).pool_name
+
         data = {
             'scrape_timestamp': scrape_time.isoformat(),
-            'scrape_metadata': {
-                'total_facilities': len(pool_data),
-                'pools_count': len(pools),
-                'saunas_count': len(saunas),
-                'unknown_count': len(unknown),
-                'scrape_duration_ms': metadata.get('duration_ms') if metadata else None,
-                'hour': scrape_time.hour,
-                'day_of_week': scrape_time.weekday(),
-                'is_weekend': scrape_time.weekday() >= 5
-            },
-            'pools': [pool.to_dict() for pool in pools],
-            'saunas': [sauna.to_dict() for sauna in saunas],
-            'unknown_facilities': [u.to_dict() for u in unknown] if unknown else [],
-            'summary': {
-                'avg_pool_occupancy': sum(p.occupancy_percent or 0 for p in pools) / len(pools) if pools else 0,
-                'avg_sauna_occupancy': sum(s.occupancy_percent or 0 for s in saunas) / len(saunas) if saunas else 0,
-                'busiest_pool': max(pools, key=lambda x: x.occupancy_percent or 0).pool_name if pools else None,
-                'quietest_pool': min(pools, key=lambda x: x.occupancy_percent or 100).pool_name if pools else None
-            }
+            'scrape_metadata': scrape_metadata,
+            **facilities_by_type,
+            'summary': summary
         }
-        
-        if metadata:
-            data['scrape_metadata'].update(metadata)
-        
-        with open(filepath, 'w', encoding='utf-8') as jsonfile:
-            json.dump(data, jsonfile, indent=2, ensure_ascii=False)
-        
+
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        # Log counts
+        counts = ', '.join(f"{len(v)} {k}" for k, v in sorted(by_type.items()))
         self.logger.info(f"Saved {len(pool_data)} records to {filepath}")
-        self.logger.info(f"  - {len(pools)} pools, {len(saunas)} saunas")
+        self.logger.info(f"  - {counts}")
         return filepath
     
     def load_from_csv(self, filename: str = None) -> List[Dict[str, Any]]:

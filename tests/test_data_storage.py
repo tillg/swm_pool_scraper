@@ -171,22 +171,20 @@ class TestDataStorage:
                 # Check metadata
                 metadata_section = data['scrape_metadata']
                 assert metadata_section['total_facilities'] == 3
-                assert metadata_section['pools_count'] == 2
-                assert metadata_section['saunas_count'] == 1
+                assert metadata_section['pool_count'] == 2
+                assert metadata_section['sauna_count'] == 1
                 assert metadata_section['duration_ms'] == 1500
                 assert metadata_section['hour'] == 14
                 assert metadata_section['day_of_week'] == 6  # Sunday
                 assert metadata_section['is_weekend'] is True
-                
+
                 # Check facility separation
                 assert len(data['pools']) == 2
                 assert len(data['saunas']) == 1
-                assert len(data.get('unknown_facilities', [])) == 0
-                
+
                 # Check summary stats
                 summary = data['summary']
                 assert summary['avg_pool_occupancy'] == 80.0  # (75+85)/2
-                assert summary['avg_sauna_occupancy'] == 90.0
                 assert summary['busiest_pool'] == "Cosimawellenbad"
                 assert summary['quietest_pool'] == "Bad Giesing-Harlaching"
     
@@ -209,40 +207,38 @@ class TestDataStorage:
         """Test JSON saving handles unknown facility types"""
         with patch('src.data_storage.SCRAPED_DATA_DIR', temp_dir):
             storage = DataStorage(test_mode=False)
-            
+
             timestamp = datetime.now()
             unknown_pool = PoolOccupancy("Unknown Pool", "50 % frei", timestamp)
             unknown_pool.facility_type = "unknown"
-            
+
             filepath = storage.save_to_json([unknown_pool])
-            
+
             with open(filepath, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                
-                assert len(data['pools']) == 0
-                assert len(data['saunas']) == 0
-                assert len(data['unknown_facilities']) == 1
-                assert data['unknown_facilities'][0]['pool_name'] == "Unknown Pool"
+
+                # Dynamic grouping: unknown type becomes "unknowns" section
+                assert 'pools' not in data  # No pools
+                assert 'saunas' not in data  # No saunas
+                assert len(data['unknowns']) == 1
+                assert data['unknowns'][0]['pool_name'] == "Unknown Pool"
     
     def test_save_to_json_empty_pool_list(self, temp_dir):
         """Test JSON saving with empty pool list"""
         with patch('src.data_storage.SCRAPED_DATA_DIR', temp_dir):
             storage = DataStorage(test_mode=False)
-            
+
             filepath = storage.save_to_json([])
-            
+
             with open(filepath, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                
+
                 assert data['scrape_metadata']['total_facilities'] == 0
-                assert data['scrape_metadata']['pools_count'] == 0
-                assert data['scrape_metadata']['saunas_count'] == 0
-                assert len(data['pools']) == 0
-                assert len(data['saunas']) == 0
-                assert data['summary']['avg_pool_occupancy'] == 0
-                assert data['summary']['avg_sauna_occupancy'] == 0
-                assert data['summary']['busiest_pool'] is None
-                assert data['summary']['quietest_pool'] is None
+                # No type-specific counts when empty
+                assert 'pools' not in data
+                assert 'saunas' not in data
+                # Empty summary when no pools
+                assert data['summary'] == {}
     
     def test_load_from_csv_existing_file(self, temp_dir, sample_pool_data):
         """Test loading from existing CSV file"""
@@ -389,16 +385,16 @@ class TestDataStorage:
             
             with open(filepath, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                
-                # Check categorization
+
+                # Check categorization - dynamic grouping by type
                 pool_names = [p['pool_name'] for p in data['pools']]
                 sauna_names = [s['pool_name'] for s in data['saunas']]
-                unknown_names = [u['pool_name'] for u in data['unknown_facilities']]
-                
+                unknown_names = [u['pool_name'] for u in data['unknowns']]
+
                 assert "Regular Pool" in pool_names
                 assert "Regular Sauna" in sauna_names
-                
-                # Empty/None/unknown should go to unknown_facilities  
+
+                # Empty/None/unknown should go to unknowns section
                 # Note: "Empty Type" will have default facility_type="unknown"
                 unknown_expected = {"Mystery Facility", "Empty Type", "None Type"}
                 assert set(unknown_names) == unknown_expected

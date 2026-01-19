@@ -1,16 +1,15 @@
 # SWM Pool Scraper
 
-A production-ready web scraper for collecting real-time pool occupancy data from Stadtwerke München (SWM). The scraper targets https://www.swm.de/baeder/auslastung to gather indoor pool and sauna capacity information for machine learning applications.
+A production-ready web scraper for collecting real-time pool occupancy data from Stadtwerke München (SWM). The scraper targets https://www.swm.de/baeder/auslastung to gather indoor pool, sauna, and ice rink capacity information for machine learning applications.
 
 ## Features
 
-- 🚀 **API-based scraping** - Direct access to Ticos counter API (10x faster than web scraping)
-- 🏊‍♂️ **Real-time data collection** - Monitors occupancy for 7 pools and 6 saunas
-- 📊 **ML-optimized output** - Rich JSON data with Create ML-ready CSV conversion
-- 🕐 **Time-based features** - Hour, day-of-week, weekend indicators for temporal modeling  
-- 🔍 **Automatic monitoring** - Detects new facilities and capacity changes
-- 📈 **Analytics ready** - Summary statistics and metadata included
-- 🔄 **Dual-mode operation** - API (fast) or Selenium (fallback) scraping methods
+- **API-based scraping** - Direct access to Ticos counter API (fast and reliable)
+- **Real-time data collection** - Monitors occupancy for 9 pools, 7 saunas, and 1 ice rink
+- **ML-optimized output** - Rich JSON data with Create ML-ready CSV conversion
+- **Time-based features** - Hour, day-of-week, weekend indicators for temporal modeling
+- **Analytics ready** - Summary statistics and metadata included
+- **Dual-mode operation** - API (fast) or Selenium (fallback) scraping methods
 
 ## Quick Start
 
@@ -19,7 +18,7 @@ A production-ready web scraper for collecting real-time pool occupancy data from
 pip install -r requirements.txt
 
 # Scrape data (saves to scraped_data/)
-python main.py
+python scrape.py
 
 # Convert to CSV for Create ML
 python json_to_csv.py --include-test-data
@@ -30,25 +29,22 @@ python json_to_csv.py --include-test-data
 **Data Collection Methods:**
 1. **API Mode (Default)** - Direct calls to `counter.ticos-systems.cloud` API
 2. **Selenium Mode (Fallback)** - Browser automation if API changes
-3. **Monitoring Mode** - Checks for new facilities and changes
-4. **Validation Mode** - Compares API data with website display
 
 **Project Structure:**
 ```
 swm_pool_scraper/
-├── main.py                # Main scraper with multiple modes
+├── scrape.py              # Main scraper CLI
 ├── json_to_csv.py         # CSV converter for Create ML
-├── config/
-│   └── facilities.json    # Organization ID to pool name mappings
 ├── src/
+│   ├── facilities.py      # Facility name to org_id mappings
 │   ├── api_scraper.py     # API-based scraping (fast)
 │   ├── scraper.py         # Selenium-based scraping (fallback)
-│   ├── facility_registry.py # Facility management & discovery
+│   ├── facility_registry.py # Facility registry wrapper
 │   ├── models.py          # Data models with ML features
 │   ├── data_storage.py    # JSON/CSV output handling
 │   └── logger.py          # Logging configuration
 ├── scraped_data/          # Production JSON data (tracked in git)
-└── test_data/            # Development data (ignored)
+└── test_data/             # Development data (ignored)
 ```
 
 ## Data Format
@@ -56,21 +52,27 @@ swm_pool_scraper/
 **JSON Output** (Rich metadata):
 ```json
 {
-  "scrape_timestamp": "2025-08-31T13:01:14.168",
+  "scrape_timestamp": "2026-01-19T08:28:51.215664+01:00",
   "scrape_metadata": {
-    "pools_count": 6,
-    "saunas_count": 6,
-    "avg_pool_occupancy": 60.17,
-    "busiest_pool": "Bad Giesing-Harlaching"
+    "total_facilities": 17,
+    "pools_count": 9,
+    "saunas_count": 7,
+    "method": "api"
   },
   "pools": [
     {
       "pool_name": "Nordbad",
-      "occupancy_percent": 36.0,
-      "is_weekend": true,
-      "hour": 13
+      "facility_type": "pool",
+      "occupancy_percent": 78.0,
+      "is_weekend": false,
+      "hour": 8
     }
-  ]
+  ],
+  "saunas": [...],
+  "summary": {
+    "avg_pool_occupancy": 85.2,
+    "busiest_pool": "Cosimawellenbad"
+  }
 }
 ```
 
@@ -78,63 +80,35 @@ swm_pool_scraper/
 
 ```csv
 timestamp,pool_name,facility_type,occupancy_percent,hour,day_of_week,is_weekend
-2025-08-31T13:01:14,Nordbad,pool,36.0,13,6,1
+2026-01-19T08:28:47,Nordbad,pool,78.0,8,0,0
 ```
 
 ## Tech Stack
 
 - **Python 3.13** - Base language
-- **Selenium** - Browser automation for dynamic content
+- **Requests** - HTTP client for API calls
+- **Selenium** - Browser automation (fallback mode)
 - **Beautiful Soup** - HTML parsing
-- **Chrome WebDriver** - Automated browser control
 - **JSON/CSV** - Data storage formats
-
-## Monitoring for New Facilities
-
-The scraper includes automatic monitoring to detect when SWM adds new pools or saunas:
-
-**Check for New Facilities:**
-```bash
-# Run monitoring check
-python main.py --monitor
-
-# This will:
-# 1. Check the website for unknown pool names
-# 2. Compare with config/facilities.json
-# 3. Report any new facilities found
-```
-
-**Validate API vs Website:**
-```bash
-# Ensure API data matches website display
-python main.py --validate
-
-# Reports any mismatches between API and website
-```
-
-**Manual Discovery Process:**
-1. Check monitoring report for unknown facilities
-2. Look for patterns in organization IDs (they're sequential)
-3. Update `config/facilities.json` with new mappings
-4. Test with `python main.py --method api`
-
-**Automatic Alerts:**
-- New facilities are logged as warnings
-- Capacity changes are tracked automatically
-- Check `alerts.json` for historical changes
 
 ## Usage Examples
 
 **Regular Data Collection:**
 ```bash
 # API mode (fast, ~2 seconds)
-python main.py
+python scrape.py
 
 # Selenium mode (fallback, ~10 seconds)
-python main.py --method selenium
+python scrape.py --method selenium
+
+# Test mode (saves to test_data/)
+python scrape.py --test
+
+# Custom output directory
+python scrape.py --output-dir /path/to/output
 
 # Run every 15 minutes via cron
-*/15 * * * * cd /path/to/scraper && python main.py
+*/15 * * * * cd /path/to/scraper && python scrape.py
 ```
 
 **Create ML Training:**
@@ -154,44 +128,50 @@ let regressor = try MLRegressor(trainingData: dataTable, targetColumn: "occupanc
 python -m json.tool scraped_data/pool_data_*.json | tail -50
 ```
 
+## Facility Management
+
+The scraper uses a static facility registry in `src/facilities.py`. This maps facility names and types to their Ticos API organization IDs.
+
+**Current facilities (17 total):**
+- 9 swimming pools (Hallenbäder)
+- 7 saunas
+- 1 ice rink
+
+**Adding new facilities:**
+1. Find the new facility on the SWM website
+2. Discover its org_id by probing the API (IDs are roughly sequential around 30xxx)
+3. Add the mapping to `src/facilities.py`
+4. Run tests to verify: `python -m pytest tests/test_facility_coverage.py -v`
+
+**Note:** Facilities are never deleted from the registry. If a facility returns no data, it's likely closed — the scraper skips it gracefully.
+
 ## Testing
 
 **Run All Tests:**
 ```bash
 # Complete test suite
-python run_tests.py all
-
-# Or directly with pytest
 python -m pytest tests/ -v
 ```
 
 **Run Specific Test Suites:**
 ```bash
-# Model tests only
-python run_tests.py models
-
 # API scraper tests only
-python run_tests.py api
+python -m pytest tests/test_api_scraper.py -v
 
 # Data storage tests only
-python run_tests.py storage
+python -m pytest tests/test_data_storage.py -v
 
-# Quick tests (excludes selenium)
-python run_tests.py quick
-
-# Integration tests (require network, test against live website)
-python -m pytest tests/ -v -m integration
+# Facility coverage tests (verify all facilities registered)
+python -m pytest tests/test_facility_coverage.py -v
 ```
 
 **Test Configuration:**
 - Tests are configured via `pytest.ini`
 - Test files follow the pattern `test_*.py` in the `tests/` directory
 - Use `-v` flag for verbose output
-- Selenium tests are marked with `@pytest.mark.selenium` for selective execution
-- Integration tests are marked with `@pytest.mark.integration` (verify scraper covers all website facilities)
 
-**Integration Tests (`test_facility_coverage.py`):**
-These tests verify the scraper's facility registry matches the SWM website:
+**Facility Coverage Tests (`test_facility_coverage.py`):**
+These tests verify the scraper's facility registry matches expected counts:
 - `test_all_pools_are_registered` - Checks all 9 pools are registered
 - `test_all_saunas_are_registered` - Checks all 7 saunas are registered
 - `test_all_ice_rinks_are_registered` - Checks all ice rinks are registered
