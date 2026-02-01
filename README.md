@@ -176,3 +176,7 @@ These tests verify the scraper's facility registry matches expected counts:
 - `test_all_saunas_are_registered` - Checks all 7 saunas are registered
 - `test_all_ice_rinks_are_registered` - Checks all ice rinks are registered
 - `test_total_facility_count` - Verifies total count (17 facilities)
+
+# To do
+
+* Weather data Timezone handling in normalization: The _normalize_response function hardcodes +01:00 but Munich uses +02:00 in summer (DST). Consider using the API's actual timezone offset.
