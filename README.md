@@ -83,6 +83,28 @@ timestamp,pool_name,facility_type,occupancy_percent,hour,day_of_week,is_weekend
 2026-01-19T08:28:47,Nordbad,pool,78.0,8,0,0
 ```
 
+## Timestamp Handling
+
+All timestamps use **Europe/Berlin local time** with the correct UTC offset (CET = `+01:00` in winter, CEST = `+02:00` in summer). This is intentional: pool usage patterns are driven by wall-clock time, not UTC.
+
+**How it works:**
+
+- A single timestamp is captured per scrape batch via `datetime.now(ZoneInfo("Europe/Berlin"))` (see `config.py`)
+- All time-based features (`hour`, `day_of_week`, `is_weekend`) are derived from this timezone-aware datetime (see `src/models.py`)
+- Output timestamps are serialized with `.isoformat()`, preserving the correct offset
+
+**Example:** A scrape at 2 PM on a summer day produces:
+```json
+{
+  "timestamp": "2026-07-15T14:00:00.123456+02:00",
+  "hour": 14,
+  "day_of_week": 2,
+  "is_weekend": false
+}
+```
+
+**For downstream consumers** (e.g., [swm_pool_data](https://github.com/tillg/swm_pool_data)): timestamps may contain mixed offsets across a DST boundary. Always parse with a UTC-first strategy (`pd.to_datetime(..., utc=True)`) and convert to Berlin time, rather than assuming a fixed offset.
+
 ## Tech Stack
 
 - **Python 3.13** - Base language
@@ -177,6 +199,3 @@ These tests verify the scraper's facility registry matches expected counts:
 - `test_all_ice_rinks_are_registered` - Checks all ice rinks are registered
 - `test_total_facility_count` - Verifies total count (17 facilities)
 
-# To do
-
-* Weather data Timezone handling in normalization: The _normalize_response function hardcodes +01:00 but Munich uses +02:00 in summer (DST). Consider using the API's actual timezone offset.
