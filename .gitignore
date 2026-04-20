@@ -190,6 +190,7 @@ Temporary Items
 test_data/
 *.csv
 *.log
+tmp/
 
 # Keep JSON scraped data for version control
 # scraped_data/ directory will be tracked

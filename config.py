@@ -10,6 +10,7 @@ TEST_DATA_DIR = BASE_DIR / "test_data"
 SCRAPED_DATA_DIR = BASE_DIR / "scraped_data"
 
 SWM_URL = "https://www.swm.de/baeder/auslastung"
+FACILITY_PAGE_BASE_URL = "https://www.swm.de/baeder"
 
 SELENIUM_CONFIG = {
     "implicit_wait": 10,

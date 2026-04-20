@@ -133,6 +133,49 @@ python scrape.py --output-dir /path/to/output
 */15 * * * * cd /path/to/scraper && python scrape.py
 ```
 
+**Opening Hours (daily):**
+```bash
+# Scrape published opening hours for all 17 facilities
+python scrape_opening_hours.py
+
+# Test mode (saves to test_data/)
+python scrape_opening_hours.py --test
+
+# Custom output directory (used by the swm_pool_data GH Actions workflow)
+python scrape_opening_hours.py --output-dir facility_openings_raw
+```
+
+Output file: `facility_opening_YYYYMMDD_HHMMSS.json`, same directory
+convention as the occupancy snapshots. Each entry carries a `status` of
+`open` (weekly schedule populated) or `closed_for_season` (e.g. the ice
+rink outside ice season). Any other parse failure is fatal — the scheduler
+emails the operator so markup drift is noticed immediately.
+
+Example entry:
+```json
+{
+  "pool_name": "Cosimawellenbad",
+  "facility_type": "pool",
+  "status": "open",
+  "url": "https://www.swm.de/baeder/cosimawellenbad",
+  "heading": "Öffnungszeiten Hallenbad",
+  "weekly_schedule": {
+    "monday":   [{"open": "07:30", "close": "23:00"}],
+    "saturday": [{"open": "07:30", "close": "23:00"}]
+  },
+  "special_notes": ["Kassenschluss: 30 Minuten vor Ende der Öffnungszeit"]
+}
+```
+
+Pool + sauna at the same address (6 pool+sauna pages plus Dantebad) produce
+two entries from a single fetched page, distinguished by
+`(pool_name, facility_type)` and their respective `heading` text.
+
+Adding a new facility: register it in `src/facilities.py` and add a
+`PageBinding(url, heading)` entry to `src/facility_pages.py`. The heading
+must match the facility's opening-hours heading on its SWM page verbatim.
+Tests in `tests/test_facility_pages_coverage.py` enforce 1:1 coverage.
+
 **Create ML Training:**
 ```bash
 # Convert all historical data to CSV

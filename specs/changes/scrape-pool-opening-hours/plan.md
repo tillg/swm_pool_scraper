@@ -5,140 +5,189 @@ in one pass.
 
 ## 1. Discover URLs and section ids
 
-- [ ] Fetch `https://www.swm.de/baeder/auslastung` and extract the per-facility
-      links — this gives us the URL for each of the 17 facilities.
-- [ ] Open each URL and record the section id(s) where opening hours live.
-      For the six shared pages (Cosimawellenbad, Michaelibad, Nordbad, Südbad,
-      Westbad, Müller'sches Volksbad) capture **two** section ids — pool and
-      sauna.
-- [ ] Confirm Dantebad (sauna-only) and Dante-Winter-Warmfreibad (pool-only)
-      are separate pages.
-- [ ] Confirm the ice-rink URL and section id for Prinzregentenstadion.
-- [ ] Record each `(name, FacilityType) → (url, section_id)` in a scratch
-      note. Escalate if any facility has no discoverable page or section.
+- [x] ~Fetch `/baeder/auslastung` and extract links~ — overview page is
+      JS-rendered; the category pages `/baeder/hallenbaeder-muenchen`,
+      `/baeder/saunen-muenchen`, and `/baeder/eislaufen` list facility links
+      statically.
+- [x] Open each URL and record the **heading** used by the pool and sauna
+      subsections. Discovery outcome: `id="oeffnungszeiten"` is an anchor
+      separator; actual hours live in **sibling `<section>` modules
+      identified by heading text**. Binding shape updated to
+      `(url, heading)` in architecture.md.
+- [x] Dantebad (sauna) and Dante-Winter-Warmfreibad (pool) share one page
+      (`/baeder/freibaeder-muenchen/dantebad`) — **7 shared pages, not 6**.
+- [x] Ice rink lives at `/baeder/eislaufen`. Currently **closed for season**
+      (no `oeffnungszeiten` anchor present), marker text:
+      `"Die Eislaufsaison 2025/2026 ist beendet."`.
+- [x] Initial `CLOSED_SEASON_MARKERS` derived:
+      `"Eislaufsaison"` + `"beendet"`, plus the generic keywords
+      `"Saison beendet"`, `"Winterpause"`, `"Sommerpause"`.
+- [x] `(name, FacilityType) → (url, heading)` recorded; see
+      `PAGE_BINDINGS` populated in step 2.
 
 ## 2. Add `src/facility_pages.py`
 
-- [ ] Create a frozen `PageBinding` dataclass (`url`, `section_id`).
-- [ ] Populate `PAGE_BINDINGS: Dict[Tuple[str, FacilityType], PageBinding]`
+- [x] Create a frozen `PageBinding` dataclass (`url`, `heading`).
+- [x] Populate `PAGE_BINDINGS: Dict[Tuple[str, FacilityType], PageBinding]`
       with all 17 entries from step 1.
-- [ ] Add helpers: `get_binding(name, type)` (raises on missing) and
+- [x] Add helpers: `get_binding(name, type)` (raises on missing) and
       `unique_urls()` for deduplicated fetching.
 
 ## 3. Add `FACILITY_PAGE_BASE_URL` to `config.py`
 
-- [ ] Add the base URL constant alongside the existing `SWM_URL`.
+- [x] Add the base URL constant alongside the existing `SWM_URL`.
 
 ## 4. Enforce coverage invariant
 
-- [ ] `tests/test_facility_pages_coverage.py`:
-  - [ ] Every `FACILITIES` key has a `PAGE_BINDINGS` entry.
-  - [ ] Every `PAGE_BINDINGS` key exists in `FACILITIES`.
-  - [ ] Shared-page facilities have identical `url` but distinct `section_id`.
+- [x] `tests/test_facility_pages_coverage.py`:
+  - [x] Every `FACILITIES` key has a `PAGE_BINDINGS` entry.
+  - [x] Every `PAGE_BINDINGS` key exists in `FACILITIES`.
+  - [x] Shared-page facilities have identical `url` but distinct `heading`.
 
 ## 5. Define the data model
 
-- [ ] `src/opening_hours_model.py` with `FacilityOpeningHours` dataclass
-      (`pool_name`, `facility_type`, `url`, `section_id`, `weekly_schedule`,
-      `special_notes`, `raw_section`, `scraped_at`) and `to_dict()` producing
-      the shape in `architecture.md`.
+- [x] `src/opening_hours_model.py` with `FacilityOpeningHours` dataclass:
+      `pool_name`, `facility_type`, `status` (`"open" | "closed_for_season"`),
+      `url`, `heading`, `weekly_schedule`, `special_notes`, `raw_section`,
+      `scraped_at`.
+- [x] Implement `to_dict()` producing the per-facility JSON shape from
+      `architecture.md`.
 
 ## 6. Capture fixture HTML
 
-- [ ] Save three fixtures to `tests/fixtures/`:
-  - [ ] `olympia_schwimmhalle.html` (pool-only).
-  - [ ] `cosimawellenbad.html` (shared pool + sauna).
-  - [ ] `prinzregentenstadion.html` (ice rink).
-- [ ] Brief README in `tests/fixtures/` describing how to refresh them.
+- [x] Save fixtures to `tests/fixtures/` for all 10 unique pages:
+  - [x] `olympia-schwimmhalle.html` — pool-only, open.
+  - [x] `cosimawellenbad.html` — shared pool + sauna, both open.
+  - [x] `eislaufen.html` — ice rink, currently closed for season.
+  - [x] `dantebad.html` — shared page, pool uses split Mo/Mi/Fr vs
+        Di/Do/Sa/So pattern.
+  - [x] `westbad-hallenbad.html` — sauna has unusual heading
+        ("Öffnungszeiten Saunainsel (textilfrei)").
+  - [x] Plus `bad-giesing-harlaching`, `michaelibad-hallenbad`,
+        `muellersches-volksbad`, `nordbad`, `suedbad`.
+- [x] Brief README in `tests/fixtures/` describing how to refresh them.
 
 ## 7. Implement the HTML parser
 
-- [ ] `src/opening_hours_parser.py` exposing a pure function
-      `parse_opening_hours(html, binding, pool_name, facility_type)
-      -> FacilityOpeningHours`.
-- [ ] Locate `binding.section_id` via BeautifulSoup.
-- [ ] Parse weekly schedule into `weekday → [{open, close}]`. Accept `-` and
-      `–`; map German weekday names (Montag..Sonntag) to English keys.
-- [ ] Capture free-form notes into `special_notes`; preserve section text
-      in `raw_section`.
-- [ ] On missing section or unparseable schedule, **raise** — no partial
-      results (per D4 hard-fail policy).
+- [x] `src/opening_hours_parser.py` exposing
+      `parse_opening_hours(html, binding, pool_name, facility_type,
+      scraped_at) -> FacilityOpeningHours`.
+- [x] `CLOSED_SEASON_MARKERS` populated from step 1 (case-insensitive
+      substring match).
+- [x] Locate heading via `soup.find_all('h{2,3,4}')` + exact text match;
+      content block is the parent `<div class="text-plus__col">`.
+- [x] Extract weekly schedule into `weekday → [{open, close}]`. Accept
+      short/long German weekday names (Mo/Montag...); support range ("Mo
+      bis So"), list ("Mo, Mi, Fr"), wrap-around ("Samstag bis Montag"),
+      and multiple intervals per day ("... und ...").
+- [x] Outcome logic:
+  - [x] At least one interval parsed → `status = "open"`.
+  - [x] No heading found AND page text hits `CLOSED_SEASON_MARKERS` →
+        `status = "closed_for_season"`, empty schedule, marker captured
+        in `special_notes`.
+  - [x] Otherwise → raise `ParseError`.
+- [x] `Kassenschluss`/`Badeschluss`/`Saunaschluss` info lines pass through
+      without stopping schedule parsing; any other non-match after the
+      main schedule stops parsing and remaining lines become
+      `special_notes` (prevents Wellenzeiten/Damentag sub-schedules from
+      leaking into the main weekly_schedule).
 
 ## 8. Unit-test the parser
 
-- [ ] `tests/test_opening_hours_parser.py`:
-  - [ ] Pool fixture parses the expected weekdays.
-  - [ ] Shared-page fixture yields distinct schedules for pool vs sauna.
-  - [ ] Ice-rink fixture parses.
-  - [ ] Missing section id raises with a descriptive message.
-  - [ ] German weekday names map to English keys.
+- [x] `tests/test_opening_hours_parser.py` (14 tests):
+  - [x] Pool fixture parses the expected weekdays.
+  - [x] Shared-page fixture yields distinct schedules for pool vs sauna.
+  - [x] Wellenzeiten sub-block does NOT leak into schedule but DOES land
+        in notes.
+  - [x] Kassenschluss passes through as note without breaking parsing.
+  - [x] Split weekday groups parse correctly (Dantebad pool).
+  - [x] Westbad sauna parses the unusual heading.
+  - [x] Ice rink fixture yields `closed_for_season` with marker.
+  - [x] Missing heading + no marker raises `ParseError`.
+  - [x] Heading present but no parseable intervals raises.
+  - [x] Day tokenization: range, wrap-around, list, full names.
 
 ## 9. Implement the scraper
 
-- [ ] `src/opening_hours_scraper.py` with `OpeningHoursScraper`:
-  - [ ] `requests.Session` with the same `Retry` strategy as `SWMAPIScraper`
-        (3 retries, backoff).
-  - [ ] Fetches each URL from `unique_urls()` once and caches the HTML.
-  - [ ] For each `(name, type)` in `FACILITIES`, looks up the binding and
-        calls `parse_opening_hours`.
-  - [ ] Any fetch failure, missing section, or parse error propagates as an
-        exception (hard fail).
-  - [ ] Returns `List[FacilityOpeningHours]` of length 17 on success.
-- [ ] Add `ManagedOpeningHoursScraper` context manager, mirroring
+- [x] `src/opening_hours_scraper.py` with `OpeningHoursScraper`:
+  - [x] `requests.Session` with the same `Retry` strategy as `SWMAPIScraper`
+        (3 retries, backoff 1).
+  - [x] `assert_covers_facilities()` at the top of the run — coverage bug
+        fails fast.
+  - [x] Fetches each URL from `unique_urls()` once and caches the HTML.
+  - [x] Iterates `FACILITIES` in declaration order; any parse error
+        propagates as an exception.
+- [x] Add `ManagedOpeningHoursScraper` context manager, mirroring
       `ManagedAPIScraper`.
 
 ## 10. Extend `DataStorage`
 
-- [ ] Add `save_opening_hours(entries, metadata)` that writes
+- [x] Add `save_opening_hours(entries, metadata)` that writes
       `facility_opening_YYYYMMDD_HHMMSS.json` using the same directory
       resolution (`test_mode` / `output_dir`) as `save_to_json`.
-- [ ] Emit the top-level shape from `architecture.md` (scrape_timestamp,
-      per-type counts, `unique_pages_fetched`, `facilities` list).
+- [x] Emit per-type counts, `unique_pages_fetched`, `open_count`,
+      `closed_for_season_count` in `scrape_metadata`.
 
 ## 11. Add the CLI
 
-- [ ] `scrape_opening_hours.py` at the repo root:
-  - [ ] Args: `--test`, `--log-level`, `--output-dir`.
-  - [ ] Runs the scraper; on any exception log and exit non-zero **without
-        writing a snapshot**.
-  - [ ] On success, call `save_opening_hours` and exit 0.
-  - [ ] Print a compact per-facility summary.
+- [x] `scrape_opening_hours.py` at the repo root, same argument conventions
+      as `scrape.py`:
+  - [x] Args: `--test`, `--log-level`, `--output-dir`.
+  - [x] On any exception: log, exit non-zero, **no snapshot written**.
+  - [x] On success: call `save_opening_hours` and exit 0.
+  - [x] Compact per-facility summary showing `status`.
 
 ## 12. Integration test
 
-- [ ] `tests/test_opening_hours_scraper.py` monkey-patches
-      `requests.Session.get` to return fixture HTML per URL and verifies:
-  - [ ] Happy path returns 17 entries and writes the snapshot.
-  - [ ] A single-facility parse failure raises and **no file is written**.
-  - [ ] Shared pages yield two entries with distinct `facility_type`.
+- [x] `tests/test_opening_hours_scraper.py` (4 tests) monkey-patches
+      `OpeningHoursScraper._fetch` to return fixture HTML and verifies:
+  - [x] Happy path returns 17 entries and writes the snapshot with correct
+        per-type and per-status counts.
+  - [x] A single-facility hard parse failure raises and **no file is
+        written**.
+  - [x] Shared pages yield two entries with distinct `facility_type`.
 
-## 13. Wire up the daily schedule
+## 13. Wire up the daily schedule (in `swm_pool_data`)
 
-- [ ] Match whatever already schedules `scrape.py`. Default to a GitHub
-      Actions workflow (simpler to configure email on failure).
-- [ ] Run `python scrape_opening_hours.py` once per day, early-morning
-      Berlin time (e.g. 04:00 local).
-- [ ] Configure failure notifications so the operator gets an email on any
-      non-zero exit.
+> This step is a PR against the `swm_pool_data` repo, not this one.
+> **Not done from here** — it needs to be implemented against that repo.
 
-## 14. Update documentation
+- [ ] Add `.github/workflows/load_opening_hours.yml`, modeled on the existing
+      `scrape.yml`:
+  - [ ] Schedule: once per day, early-morning Berlin time (e.g. 03:00 UTC).
+  - [ ] Checkout both `swm_pool_data` and `swm_pool_scraper`.
+  - [ ] `pip install -r scraper/requirements.txt`.
+  - [ ] Run `python scraper/scrape_opening_hours.py --output-dir facility_openings_raw`.
+  - [ ] Commit and push on success.
+  - [ ] `permissions: contents: write`; default GH Actions email on failure
+        reaches the operator (verify notification settings).
+- [ ] Create directory `facility_openings_raw/` in `swm_pool_data` with a
+      short `README.md` explaining the file format.
 
-- [ ] `README.md`: document the two cadences, show a `facility_opening_*.json`
-      example (including a shared-page case), and note how to re-confirm
-      bindings when a facility is added.
-- [ ] `CLAUDE.md`: mention the `facility_opening_*.json` prefix under Data
-      Management and the daily cadence.
+## 14. Update documentation (in this repo)
+
+- [x] `README.md`: added an "Opening Hours (daily)" usage block with an
+      example JSON entry and a note on adding new facilities.
+- [x] `CLAUDE.md`: added a two-cadence table up front; listed the new file
+      prefix and `tmp/` ignore under Data Management.
 
 ## 15. First production run & verification
 
-- [ ] Run `python scrape_opening_hours.py --test` locally; inspect the file.
-- [ ] Spot-check Cosimawellenbad: pool and sauna must have different
-      schedules.
-- [ ] Run without `--test`; confirm the file lands in `scraped_data/` and
-      commit it (matches existing policy of tracking production JSON).
+- [x] Run `python scrape_opening_hours.py --test` locally — 17 entries
+      scraped in ~1 second, all pools/saunas `open`, ice rink
+      `closed_for_season`.
+- [x] Spot-check Cosimawellenbad: pool = 07:30–23:00, sauna = 09:00–23:00
+      (distinct schedules from a single fetched page — shared-page
+      behaviour verified).
+- [x] Spot-check ice rink: `status = closed_for_season`,
+      `special_notes = ["Eislaufsaison 2025/2026 ist beendet."]`.
+- [ ] Trigger the GH Actions workflow manually (`workflow_dispatch`) —
+      blocked on step 13.
 
 ## 16. Post-launch follow-ups (out of scope)
 
 - [ ] Optional CSV view of opening hours for ML joins.
 - [ ] Structured capture of special schedules (school blocks, women-only
       sessions) beyond free-form `special_notes`.
+- [ ] Replace free-form `special_notes` with structured date-range overrides
+      once the shape becomes clear.

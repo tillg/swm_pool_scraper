@@ -131,6 +131,51 @@ class DataStorage:
         self.logger.info(f"Loaded {len(data)} records from {filepath}")
         return data
     
+    def save_opening_hours(
+        self,
+        entries: List["FacilityOpeningHours"],
+        metadata: Dict[str, Any] = None,
+        filename: str = None,
+    ) -> Path:
+        if not filename:
+            timestamp = datetime.now(TIMEZONE).strftime("%Y%m%d_%H%M%S")
+            filename = f"facility_opening_{timestamp}.json"
+
+        filepath = self.data_dir / filename
+        scrape_time = datetime.now(TIMEZONE)
+
+        type_counts: Dict[str, int] = {}
+        status_counts: Dict[str, int] = {}
+        urls = set()
+        for e in entries:
+            type_counts[e.facility_type] = type_counts.get(e.facility_type, 0) + 1
+            status_counts[e.status] = status_counts.get(e.status, 0) + 1
+            urls.add(e.url)
+
+        scrape_metadata = {
+            "total_facilities": len(entries),
+            "unique_pages_fetched": len(urls),
+            "method": "html",
+        }
+        for ftype, count in type_counts.items():
+            scrape_metadata[f"{ftype}s_count"] = count
+        for status, count in status_counts.items():
+            scrape_metadata[f"{status}_count"] = count
+        if metadata:
+            scrape_metadata.update(metadata)
+
+        data = {
+            "scrape_timestamp": scrape_time.isoformat(),
+            "scrape_metadata": scrape_metadata,
+            "facilities": [e.to_dict() for e in entries],
+        }
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        self.logger.info(f"Saved {len(entries)} opening-hours entries to {filepath}")
+        return filepath
+
     def get_latest_json_file(self) -> Path:
         json_files = list(self.data_dir.glob("pool_data_*.json"))
         if not json_files:

@@ -15,7 +15,8 @@ schedule typically applies for months at a time.
 
 A weekly schedule is a mapping **weekday → list of open intervals**. A facility
 may have multiple intervals per day (morning slot + evening slot) or none
-(closed).
+(closed). A facility may also be in a **closed-for-season** state with no
+weekly schedule at all (see below).
 
 The concept applies to **all three facility types** — pools, saunas, and the
 ice rink — with some nuance per type:
@@ -58,6 +59,28 @@ Because several facilities share a single page (pool + sauna at the same
 address), we maintain an **explicit (name, type) → (url, section_id) mapping**
 rather than computing it at runtime.
 
+### Facility Status: `open` vs `closed_for_season`
+
+Some facilities are seasonal. **Dante-Winter-Warmfreibad** is open in winter
+only; the **Prinzregentenstadion ice rink** is open during ice season only.
+Outside their season, the SWM page publishes an explicit notice
+("Saison beendet", "Winterpause", "Eissaison endet …") instead of a weekly
+schedule.
+
+The snapshot captures this as a first-class `status` field on every entry:
+
+- **`open`** — a weekly schedule parsed successfully; the facility is
+  operating and the schedule is its published plan.
+- **`closed_for_season`** — the page signals a known seasonal closure (via
+  a `CLOSED_SEASON_MARKERS` substring) and no schedule is published.
+  `weekly_schedule` is empty; the triggering marker text is preserved in
+  `special_notes`.
+
+Any other outcome (missing section, unparseable schedule with no marker) is
+an error that hard-fails the daily job, so the operator investigates. The
+`closed_for_season` state exists exactly so that seasonal facilities do not
+page a human twice a year for months on end.
+
 ### Facility Opening Snapshot
 
 The artifact produced by this scraper: a single JSON file capturing the
@@ -67,7 +90,10 @@ opening hours for **all 17 facilities** at a given point in time.
 - **Cadence**: daily
 - **Shape**: top-level metadata + list of per-facility entries keyed by
   `(pool_name, facility_type)` (same key space as occupancy data)
-- **Location**: `scraped_data/` (production), `test_data/` (test mode)
+- **Location**: in production, the `swm_pool_data` repo's
+  `facility_openings_raw/` directory (via `--output-dir`), mirroring how
+  `pool_data_*.json` files are stored; `scraped_data/` or `test_data/` for
+  local dev runs
 
 A snapshot is an idempotent capture — if SWM changes opening hours mid-day,
 the next day's snapshot reflects that; prior snapshots are not retroactively
@@ -166,3 +192,5 @@ exactly one section on exactly one page.
 | Section id                 | HTML anchor fragment identifying the hours block on a page          |
 | Snapshot                   | One daily JSON file covering all facilities                         |
 | Special note               | Free-form advisory text alongside the structured weekly schedule    |
+| Closed for season          | Recognised steady state for seasonal facilities outside their season|
+| Closed-season marker       | Substring in the raw section text that flags a seasonal closure     |

@@ -144,6 +144,18 @@ timestamp,pool_name,facility_type,occupancy_percent,is_open,hour,day_of_week,is_
 
 ## Data Collection Workflow
 
+**Two cadences:**
+
+| Command                              | Cadence       | Output prefix              |
+| ------------------------------------ | ------------- | -------------------------- |
+| `python scrape.py`                   | every 15 min  | `pool_data_*.json`         |
+| `python scrape_opening_hours.py`     | once per day  | `facility_opening_*.json`  |
+
+Both are designed to be invoked by the `swm_pool_data` repo's GitHub Actions
+workflows with `--output-dir` pointing at directories in that repo
+(`pool_scrapes_raw/` and `facility_openings_raw/` respectively). Opening-hours
+runs hard-fail on any parse error so GH Actions emails the operator.
+
 **Primary Usage (Recommended):**
 ```bash
 # 1. Collect data regularly (creates timestamped JSON files)
@@ -172,6 +184,14 @@ python scrape.py --test --headless=false --log-level DEBUG
 - ❌ `test_data/` - Development data (ignored)
 - ❌ `*.csv` - Generated files (ignored, recreated from JSON)
 - ❌ `*.log` - Log files (ignored)
+- ❌ `tmp/` - Scratch space (ignored)
+
+**File prefixes:**
+- `pool_data_*.json` — occupancy snapshots (every 15 min)
+- `facility_opening_*.json` — opening-hours snapshots (daily)
+
+In production both files land in the `swm_pool_data` repo (via `--output-dir`),
+not here.
 
 **File Organization:**
 - **JSON files**: Rich metadata, human-readable, version-controlled

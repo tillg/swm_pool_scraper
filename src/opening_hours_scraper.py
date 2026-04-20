@@ -1,0 +1,86 @@
+"""
+Fetch each SWM facility page once, parse per-facility opening hours, and
+return a list of FacilityOpeningHours entries.
+
+Hard-fails (raises) on any fetch or parse error that isn't a recognised
+closed-for-season state. The CLI turns that into a non-zero exit so the
+scheduler (GitHub Actions in swm_pool_data) surfaces the failure via email.
+"""
+
+from __future__ import annotations
+
+import logging
+from datetime import datetime
+from typing import Dict, List
+
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+from .facilities import FACILITIES
+from .facility_pages import PAGE_BINDINGS, assert_covers_facilities, unique_urls
+from .opening_hours_model import FacilityOpeningHours
+from .opening_hours_parser import parse_opening_hours
+from config import TIMEZONE
+
+
+class OpeningHoursScraper:
+    def __init__(self) -> None:
+        self.logger = logging.getLogger(__name__)
+        self.session = requests.Session()
+        retry = Retry(
+            total=3, backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
+        self.session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                          "AppleWebKit/537.36",
+            "Accept": "text/html,application/xhtml+xml",
+        })
+
+    def _fetch(self, url: str) -> str:
+        response = self.session.get(url, timeout=15)
+        response.raise_for_status()
+        response.encoding = response.apparent_encoding or "utf-8"
+        return response.text
+
+    def scrape_opening_hours(self) -> List[FacilityOpeningHours]:
+        # Coverage check up-front; a missing binding is a wiring bug.
+        assert_covers_facilities()
+
+        scraped_at = datetime.now(TIMEZONE)
+        html_by_url: Dict[str, str] = {}
+        for url in unique_urls():
+            self.logger.info(f"GET {url}")
+            html_by_url[url] = self._fetch(url)
+
+        entries: List[FacilityOpeningHours] = []
+        # Use the FACILITIES order so output is deterministic.
+        for (name, facility_type), _org_id in FACILITIES.items():
+            binding = PAGE_BINDINGS[(name, facility_type)]
+            entry = parse_opening_hours(
+                html_by_url[binding.url],
+                binding,
+                name,
+                facility_type,
+                scraped_at,
+            )
+            self.logger.debug(
+                f"✓ {name} ({facility_type.value}): {entry.status}"
+            )
+            entries.append(entry)
+        return entries
+
+
+class ManagedOpeningHoursScraper:
+    def __init__(self) -> None:
+        self.scraper = OpeningHoursScraper()
+
+    def __enter__(self) -> OpeningHoursScraper:
+        return self.scraper
+
+    def __exit__(self, *exc) -> None:
+        self.scraper.session.close()

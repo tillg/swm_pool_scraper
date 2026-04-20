@@ -8,19 +8,17 @@ and 1 ice rink — from their dedicated SWM web pages, and stores the result as
 a daily JSON snapshot:
 
 ```
-scraped_data/facility_opening_YYYYMMDD_HHMMSS.json
+facility_opening_YYYYMMDD_HHMMSS.json
 ```
 
 The file contains the opening hours for **all facilities** at the time of the
-scrape, not one file per facility.
+scrape, not one file per facility. (Renamed from the original
+`pool_opening_*.json` since scope now includes saunas and the ice rink.)
 
-> **Filename note** — the original wording used `pool_opening_*.json`. Since
-> this change covers saunas and ice rinks too, we rename the snapshot to
-> `facility_opening_*.json`. If the `pool_opening_*.json` name is preferred
-> despite the broader content, revert in `architecture.md` §D4 and the CLI.
-
-The job runs **once a day**, independent of the existing occupancy scraper
-(which runs every 15 minutes).
+The job runs **once a day**, operated exactly like the existing 15-minute
+occupancy scraper: a GitHub Actions workflow in `swm_pool_data` invokes this
+repo's CLI with `--output-dir`, then commits the new JSON file to
+`swm_pool_data/facility_openings_raw/`.
 
 ## Why
 
@@ -62,8 +60,9 @@ Source: each facility's SWM page, e.g.
 implementation; see `architecture.md`).
 
 Output: one JSON file per daily run, named
-`facility_opening_YYYYMMDD_HHMMSS.json`, written to `scraped_data/` (prod) or
-`test_data/` (test mode), mirroring the existing occupancy file convention.
+`facility_opening_YYYYMMDD_HHMMSS.json`. In production it lands in
+`swm_pool_data/facility_openings_raw/` via `--output-dir`. Local dev runs
+still land in `scraped_data/` (or `test_data/` in test mode).
 
 **Out of scope (for this change)**
 
@@ -82,11 +81,13 @@ After this change:
 - A new module `src/opening_hours_scraper.py` fetches and parses opening hours
   per facility, handling that pool + sauna at the same address (e.g.
   Cosimawellenbad) share a URL but expose **different opening-hours sections**.
-- A new CLI entry point `scrape_opening_hours.py` runs the daily job.
-- A daily scheduler (cron on the existing runner, or a new GitHub Actions
-  workflow) invokes the job once per day.
-- `scraped_data/facility_opening_*.json` files accumulate over time and are
-  committed to the repo like the existing `pool_data_*.json` files.
+- A new CLI entry point `scrape_opening_hours.py` runs the daily job,
+  accepting `--output-dir` like `scrape.py`.
+- A new GitHub Actions workflow in `swm_pool_data` invokes it once per day,
+  commits the JSON, and emails the operator on any non-zero exit.
+- `facility_opening_*.json` files accumulate in
+  `swm_pool_data/facility_openings_raw/`, mirroring how
+  `pool_data_*.json` land in `pool_scrapes_raw/`.
 - Tests validate the slug/section mapping, the parser against fixture HTML
   pages (one per facility *type*), and the JSON output shape.
 
@@ -127,8 +128,13 @@ flowchart LR
 4. **Ice rink** — Prinzregentenstadion - Eislaufbahn may not live under
    `/baeder/`. The discovery step must confirm the actual URL and section id,
    and the model must tolerate a non-`#oeffnungszeiten` section.
-5. **HTML structure** — section DOM is unknown until fetched; the parser must
-   fail loudly (not silently produce empty data) when markup drifts.
-6. **Special / seasonal hours** — we capture both the structured weekly
-   schedule **and** the raw section text, rather than fully normalizing
-   special notes in v1.
+5. **HTML structure** — section DOM is unknown until fetched; the parser
+   fails loudly when markup drifts, except for the seasonal-closure case
+   (item 6).
+6. **Seasonal closures are normal state** — Dante-Winter-Warmfreibad and the
+   ice rink are closed for months each year. The spec treats
+   `closed_for_season` as a valid, non-failing outcome (detected via known
+   German phrases like "Saison beendet"), with an empty schedule and the
+   triggering text preserved in `special_notes`.
+7. **Special hours** — we capture both the structured weekly schedule **and**
+   the raw section text, rather than fully normalizing special notes in v1.
