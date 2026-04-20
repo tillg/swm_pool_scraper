@@ -2,6 +2,50 @@
 
 A production-ready web scraper for collecting real-time pool occupancy data from Stadtwerke München (SWM). The scraper targets https://www.swm.de/baeder/auslastung to gather indoor pool, sauna, and ice rink capacity information for machine learning applications.
 
+## Resume next session (2026-04-20)
+
+> Session handoff note. Delete this section once the opening-hours
+> workflow is running daily in production.
+
+The opening-hours scraper (`scrape_opening_hours.py`) is **shipped and
+pushed** to `main`. Implementation is complete on this repo side.
+
+**Blocking next step:** `tillg/swm_pool_data` needs to gain a
+`Load Opening Hours` workflow that invokes the new CLI daily. A colleague
+agent is working on that PR; the full handoff brief (drop-in workflow
+YAML + directory README + verification commands) was shared in the
+previous chat session.
+
+**Pick up with:**
+
+```bash
+# 1. Has the colleague shipped the workflow?
+gh api /repos/tillg/swm_pool_data/actions/workflows --jq '.workflows[].name'
+# → look for "Load Opening Hours"
+
+# 2. If yes, trigger the first run and stream logs:
+gh workflow run load_opening_hours.yml -R tillg/swm_pool_data
+gh run watch -R tillg/swm_pool_data
+
+# 3. Verify the commit that should land on swm_pool_data/main:
+gh api /repos/tillg/swm_pool_data/contents/facility_openings_raw \
+  --jq '.[].name' | head
+# → expect one facility_opening_YYYYMMDD_HHMMSS.json with
+#   total_facilities:17, open_count≥16, ice rink closed_for_season.
+```
+
+If the first run fails with `ParseError`, SWM markup drifted — fix the
+offending heading in `src/facility_pages.py` or the parser itself in
+`src/opening_hours_parser.py`, push, and re-run.
+
+**Follow-ups (not urgent, not yet on a spec):**
+
+- Join `facility_opening_*.json` into `swm_pool_data/transform.py` so ML
+  rows carry an `is_scheduled_open` feature.
+- Capture seasonal/special schedules (Frauenbadetag, Wellenzeiten, …) as
+  structured date-range overrides instead of free-form `special_notes`.
+- Optional CSV view of opening hours parallel to the occupancy CSV.
+
 ## Features
 
 - **API-based scraping** - Direct access to Ticos counter API (fast and reliable)
