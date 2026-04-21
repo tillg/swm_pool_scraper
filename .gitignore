@@ -191,6 +191,7 @@ test_data/
 *.csv
 *.log
 tmp/
+.claude/
 
 # Keep JSON scraped data for version control
 # scraped_data/ directory will be tracked
