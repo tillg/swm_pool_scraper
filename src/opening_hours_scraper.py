@@ -37,8 +37,14 @@ class OpeningHoursScraper:
     def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
         self.session = requests.Session()
+        # Aggressive retry policy: www.swm.de from GH Actions runners has
+        # shown both Errno 101 (fixed by forcing IPv4 above) and v4 connect
+        # timeouts lasting tens of seconds. 5 attempts with backoff_factor=2
+        # buys ~2.5 minutes of total patience, enough to ride out most
+        # transient transit/WAF hiccups without needing a workflow-level
+        # re-run.
         retry = Retry(
-            total=3, backoff_factor=1,
+            total=5, backoff_factor=2,
             status_forcelist=[429, 500, 502, 503, 504],
         )
         adapter = HTTPAdapter(max_retries=retry)
@@ -51,7 +57,9 @@ class OpeningHoursScraper:
         })
 
     def _fetch(self, url: str) -> str:
-        response = self.session.get(url, timeout=15)
+        # (connect_timeout, read_timeout). Separate values let us fail fast
+        # on reads while giving connect some slack for the GH-runner blips.
+        response = self.session.get(url, timeout=(15, 30))
         response.raise_for_status()
         response.encoding = response.apparent_encoding or "utf-8"
         return response.text
