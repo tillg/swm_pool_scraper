@@ -10,10 +10,12 @@ scheduler (GitHub Actions in swm_pool_data) surfaces the failure via email.
 from __future__ import annotations
 
 import logging
+import socket
 from datetime import datetime
 from typing import Dict, List
 
 import requests
+import urllib3.util.connection as _urllib3_connection
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -22,6 +24,13 @@ from .facility_pages import PAGE_BINDINGS, assert_covers_facilities, unique_urls
 from .opening_hours_model import FacilityOpeningHours
 from .opening_hours_parser import parse_opening_hours
 from config import TIMEZONE
+
+# Force IPv4 for all HTTP in this process. www.swm.de has both AAAA and A
+# records; GitHub Actions runners resolve the AAAA but often have no IPv6
+# egress, producing `[Errno 101] Network is unreachable` at connect() that
+# urllib3 retries can't recover from (retries hit the same v6 address). See
+# https://github.com/tillg/swm_pool_scraper/issues/1 for the evidence.
+_urllib3_connection.allowed_gai_family = lambda: socket.AF_INET
 
 
 class OpeningHoursScraper:
